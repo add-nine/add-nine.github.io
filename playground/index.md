@@ -1,3 +1,3 @@
 -[Corrguessr](corrguessr)
 
--[Delaunay](delaunay)
+-[Delaunay](delaunay/docs)
