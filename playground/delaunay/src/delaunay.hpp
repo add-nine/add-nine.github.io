@@ -36,6 +36,8 @@ public:
     void build() {
         if (up_to_date) return;
         up_to_date = true;
+        std::sort(points.begin(), points.end());
+        points.erase(std::unique(points.begin(), points.end()), points.end());
         if ((int)points.size() < 3) return;
         triangles.clear();
         hull.clear();
@@ -49,19 +51,20 @@ public:
             expandHull(ord[i]);
             LawsonLegalization();
         }
+        check_graph();
     }
     const std::vector<Triangle>& getTriangles() const {return triangles;}
     const std::vector<Node>& getPoints() const {return points;}
     std::vector<std::pair<int,int>> getEdges() const {
-        std::vector<std::pair<int,int>> E;
+        std::vector<std::pair<int,int>> edges;
         for (const auto& tri : triangles) {
             for (uint32_t i{}; i < 3; i++) {
-                E.emplace_back(std::minmax(tri.p[i%3], tri.p[(i+1)%3]));
+                edges.emplace_back(std::minmax(tri.p[i%3], tri.p[(i+1)%3]));
             }
         }
-        std::sort(E.begin(), E.end());
-        E.erase(std::unique(E.begin(), E.end()), E.end());
-        return E;
+        std::sort(edges.begin(), edges.end());
+        edges.erase(std::unique(edges.begin(), edges.end()), edges.end());
+        return edges;
     }
 private:
     std::tuple<uint32_t, uint32_t, uint32_t> addTriangle(const uint32_t u, const uint32_t v, const uint32_t w) {
@@ -111,7 +114,7 @@ private:
         for (auto [from, to] : tmp) {
             auto it = hull_id.find(eidx(from, to));
             if (it == hull_id.end()) continue;
-            if (!ccw_orient(points[from], points[to], points[p])) {
+            if (cw_orient(points[from], points[to], points[p])) {
                 addHullEdge(it->second, p); addTriangle(from, to, p);
             }
         }
@@ -185,6 +188,18 @@ private:
                         st.emplace_back(e_id(a, b));
                     }
                 }
+                auto it = e_to_t.find(e_id(wl, wr));
+                if (it != e_to_t.end() && it->second.first != -1 && it->second.second != -1) {
+                    st.emplace_back(e_id(wl, wr));
+                }
+            }
+        }
+    }
+    void check_graph() {
+        for (uint32_t i{}; i < (uint32_t)points.size(); i++) {
+            for (const auto& tri : triangles) {
+                if (i == tri.p[0] || i == tri.p[1] || i == tri.p[2]) continue;
+                assert(!in_circle(points[tri.p[0]], points[tri.p[1]], points[tri.p[2]], points[i]));
             }
         }
     }
